@@ -24,7 +24,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     if (email === '' || password === '') {
       Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
     } else {
-      Alert.alert('Giriş Başarılı', `Hoş geldin, ${email}`);
+      Alert.alert('Giriş Başarılı', `Hoş geldiniz, ${email}`);
       navigation.navigate('FirstScreen');
     }
   };
