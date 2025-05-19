@@ -8,6 +8,7 @@ import MalatyaScreen from './src/screens/MalatyaScreen';
 import KarsScreen from './src/screens/KarsScreen';
 import ErzurumScreen from './src/screens/ErzurumScreen';
 import VanScreen from './src/screens/VanScreen';
+import HakkimizdaScreen from './src/screens/HakkimizdaScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -17,6 +18,7 @@ export type RootStackParamList = {
   KarsScreen: undefined;
   ErzurumScreen: undefined;
   VanScreen: undefined;
+  HakkimizdaScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -32,6 +34,7 @@ const App = () => {
         <Stack.Screen name="KarsScreen" component={KarsScreen} /> 
         <Stack.Screen name="VanScreen" component={VanScreen} /> 
         <Stack.Screen name="ErzurumScreen" component={ErzurumScreen} />
+        <Stack.Screen name="HakkimizdaScreen" component={HakkimizdaScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

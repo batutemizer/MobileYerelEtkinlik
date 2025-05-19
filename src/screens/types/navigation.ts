@@ -8,5 +8,6 @@ export type RootStackParamList = {
     KarsScreen: undefined;
     ErzurumScreen: undefined;
     VanScreen: undefined;
+    HakkimizdaScreen: undefined;
   };
   
