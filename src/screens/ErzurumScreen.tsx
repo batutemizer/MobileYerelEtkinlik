@@ -1,298 +1,439 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Image,
-  TouchableOpacity,
-  TextInput,
   ScrollView,
+  TouchableOpacity,
+  ImageBackground,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
 } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Event tipi tanımı
-interface Event {
+type Comment = {
   id: string;
-  category: string;
+  username: string;
+  text: string;
+  timestamp: string;
+};
+
+interface Event {
+  id: number;
   title: string;
   date: string;
+  location: string;
   description: string;
-  detailsTitle: string;
-  detailsText: string;
-  detailsList: string[];
-  image: string;
+  colors: string[];
+  icon: string;
+  details: {
+    time: string;
+    venue: string;
+    price: string;
+    category: string;
+  };
+  comments: Comment[];
 }
 
-// Örnek etkinlik verisi
-const events: Event[] = [
-  {
-    id: 'konser1',
-    category: 'Konserler',
-    title: 'Mor ve Ötesi - Erzurum Konseri',
-    date: '24 Mayıs 2025, 20:00 - Erzurum Kültür Merkezi',
-    description: 'Alternatif rock müzik Erzurum’da yankılanıyor!',
-    detailsTitle: '🎸 Mor ve Ötesi ile Rock Gecesi',
-    detailsText: 'Unutulmaz şarkılar ve müzik dolu bir gece sizi bekliyor.',
-    detailsList: [
-      '🎵 Hit parçalar sahnede',
-      '🔥 Muhteşem sahne ışıkları',
-      '🎫 Biletler tükenmeden alın!',
-    ],
-    image: 'https://www.biletwise.com/uploads/category/big/1621113836.jpg',
-  },
-  {
-    id: 'tiyatro1',
-    category: 'Tiyatrolar',
-    title: 'Deli - Komedi Oyunu',
-    date: '26 Mayıs 2025, 20:00 - Erzurum Devlet Tiyatrosu',
-    description: 'Erzurum’da kahkaha tufanı sizi bekliyor.',
-    detailsTitle: '🎭 Delilikle Mizahın Buluşması',
-    detailsText: 'Gülmek garanti! Toplumsal hicivle dolu bir gösteri.',
-    detailsList: [
-      '😂 Komik ve düşündürücü sahneler',
-      '🎟️ Geniş oyuncu kadrosu',
-      '📍 Erzurum sahnesinde canlı!',
-    ],
-    image: 'https://www.sakm.net/images/slider/sakm-tiyatro-banner-2023-aralik.jpeg',
-  },
-  {
-    id: 'soylesi1',
-    category: 'Söyleşiler',
-    title: 'Gençlerle Gelecek Üzerine',
-    date: '28 Mayıs 2025, 16:30 - Atatürk Üniversitesi Konferans Salonu',
-    description: 'Geleceğe dair ilham verici bir söyleşi Erzurum’da.',
-    detailsTitle: '🧠 İlham Veren Konuşmalıar',
-    detailsText:
-      'Gençler için kariyer ve hedef belirleme üzerine interaktif sohbet.',
-    detailsList: [
-      '🎯 Hedefe ulaşmanın yolları',
-      '💬 Katılımcı etkileşimi',
-      '🎓 Üniversite öğrencilerine özel',
-    ],
-    image: 'https://sahnedragos.com/assets/img/SG-hakkimizda-2.jpg',
-  },
-];
+const ErzurumScreen = () => {
+  const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [username, setUsername] = useState<string>('');
+  const [events, setEvents] = useState<Event[]>([
+    {
+      id: 1,
+      title: "Erzurum Kış Festivali",
+      date: "15-20 Ocak 2024",
+      location: "Palandöken Kayak Merkezi",
+      description: "Kış sporları, konserler ve eğlenceli aktivitelerle dolu bir festival.",
+      colors: ['#4b6cb7', '#182848'],
+      icon: 'ac-unit',
+      details: {
+        time: '09:00 - 22:00',
+        venue: 'Palandöken Kayak Merkezi',
+        price: '100 TL',
+        category: 'Spor & Festival',
+      },
+      comments: []
+    },
+    {
+      id: 2,
+      title: "Erzurum Cağ Kebabı Festivali",
+      date: "1-3 Eylül 2024",
+      location: "Erzurum Şehir Merkezi",
+      description: "Erzurum'un meşhur cağ kebabının tanıtıldığı lezzet festivali.",
+      colors: ['#FF512F', '#DD2476'],
+      icon: 'restaurant',
+      details: {
+        time: '11:00 - 23:00',
+        venue: 'Erzurum Şehir Meydanı',
+        price: 'Ücretsiz',
+        category: 'Gastronomi',
+      },
+      comments: []
+    },
+    {
+      id: 3,
+      title: "Erzurum Tarih ve Kültür Festivali",
+      date: "10-15 Temmuz 2024",
+      location: "Erzurum Kalesi",
+      description: "Tarihi mekanlarda kültürel etkinlikler, sergiler ve gösteriler.",
+      colors: ['#8E2DE2', '#4A00E0'],
+      icon: 'museum',
+      details: {
+        time: '10:00 - 20:00',
+        venue: 'Erzurum Kalesi ve Çevresi',
+        price: '30 TL',
+        category: 'Kültür & Sanat',
+      },
+      comments: []
+    }
+  ]);
 
-const ErzurumScreen: React.FC = () => {
-  const [searchText, setSearchText] = useState('');
-  const [expandedEventIds, setExpandedEventIds] = useState<string[]>([]);
+  useEffect(() => {
+    loadComments();
+    loadUsername();
+  }, []);
 
-  const filteredEvents = events.filter((event) => {
-    const keyword = searchText.toLowerCase();
-    return (
-      event.title.toLowerCase().includes(keyword) ||
-      event.description.toLowerCase().includes(keyword) ||
-      event.category.toLowerCase().includes(keyword)
-    );
-  });
-
-  const categories = Array.from(new Set(filteredEvents.map((e) => e.category)));
-
-  const toggleDetails = (id: string) => {
-    setExpandedEventIds((prev) =>
-      prev.includes(id) ? prev.filter((eid) => eid !== id) : [...prev, id]
-    );
+  const loadUsername = async () => {
+    try {
+      const savedUsername = await AsyncStorage.getItem('username');
+      if (savedUsername) {
+        setUsername(savedUsername);
+      }
+    } catch (error) {
+      console.error('Kullanıcı adı yüklenirken hata oluştu:', error);
+    }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Erzurum Etkinlikleri</Text>
-        <Text style={styles.headerSubtitle}>
-          Doğu’nun kültür başkentinde sanat sizi bekliyor!
-        </Text>
-      </View>
+  const loadComments = async () => {
+    try {
+      const savedComments = await AsyncStorage.getItem('erzurumEventComments');
+      if (savedComments) {
+        const parsedComments = JSON.parse(savedComments);
+        setEvents(parsedComments);
+      }
+    } catch (error) {
+      console.error('Yorumlar yüklenirken hata oluştu:', error);
+    }
+  };
 
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Etkinlik ara..."
-        value={searchText}
-        onChangeText={setSearchText}
-        clearButtonMode="while-editing"
-        placeholderTextColor="#888"
-      />
+  const saveComments = async (updatedEvents: Event[]) => {
+    try {
+      await AsyncStorage.setItem('erzurumEventComments', JSON.stringify(updatedEvents));
+    } catch (error) {
+      console.error('Yorumlar kaydedilirken hata oluştu:', error);
+    }
+  };
 
-      {categories.map((category) => (
-        <View key={category} style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {category === 'Konserler'
-              ? '🎤 '
-              : category === 'Tiyatrolar'
-              ? '🎭 '
-              : '🗣️ '}
-            {category}
-          </Text>
+  const addComment = async (eventId: number) => {
+    if (!commentText.trim() || !username) return;
 
-          {filteredEvents
-            .filter((event) => event.category === category)
-            .map((event) => (
-              <View key={event.id} style={styles.card}>
-                <Image source={{ uri: event.image }} style={styles.cardImage} />
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{event.title}</Text>
-                  <Text style={styles.cardDate}>{event.date}</Text>
-                  <Text style={styles.cardDescription}>{event.description}</Text>
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      username: username,
+      text: commentText.trim(),
+      timestamp: new Date().toLocaleString('tr-TR'),
+    };
 
-                  <TouchableOpacity
-                    style={styles.detailButton}
-                    onPress={() => toggleDetails(event.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.detailButtonText}>
-                      {expandedEventIds.includes(event.id)
-                        ? 'Detayları Gizle ⬅️'
-                        : 'Detayları Gör ➡️'}
-                    </Text>
-                  </TouchableOpacity>
+    const updatedEvents = events.map(event => {
+      if (event.id === eventId) {
+        return {
+          ...event,
+          comments: [...event.comments, newComment],
+        };
+      }
+      return event;
+    });
 
-                  {expandedEventIds.includes(event.id) && (
-                    <View style={styles.details}>
-                      <Text style={styles.detailsTitle}>{event.detailsTitle}</Text>
-                      <Text style={styles.detailsText}>{event.detailsText}</Text>
-                      {event.detailsList.map((item, index) => (
-                        <Text key={index} style={styles.detailsListItem}>
-                          • {item}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
+    setEvents(updatedEvents);
+    setCommentText('');
+    await saveComments(updatedEvents);
+  };
+
+  const toggleEventDetails = (eventId: number) => {
+    setExpandedEventId(expandedEventId === eventId ? null : eventId);
+  };
+
+  const renderEvent = ({ item }: { item: Event }) => (
+    <View style={styles.eventCard}>
+      <LinearGradient
+        colors={item.colors}
+        style={styles.eventGradient}
+      >
+        <View style={styles.eventHeader}>
+          <Icon name={item.icon} size={40} color="#fff" style={styles.eventIcon} />
+          <View style={styles.eventTitleContainer}>
+            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.eventDate}>{item.date}</Text>
+          </View>
         </View>
-      ))}
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          © 2025 Erzurum Etkinlikleri. Tüm hakları saklıdır.
+        <Text style={styles.eventLocation}>
+          <Icon name="location-on" size={16} color="#fff" /> {item.location}
         </Text>
-      </View>
-    </ScrollView>
+
+        <Text style={styles.eventDescription}>{item.description}</Text>
+
+        <TouchableOpacity
+          style={styles.detailsButton}
+          onPress={() => toggleEventDetails(item.id)}
+        >
+          <Text style={styles.detailsButtonText}>
+            {expandedEventId === item.id ? 'Detayları Gizle' : 'Detayları Göster'}
+          </Text>
+        </TouchableOpacity>
+
+        {expandedEventId === item.id && (
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <Icon name="access-time" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.time}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="place" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.venue}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="attach-money" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.price}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="category" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.category}</Text>
+            </View>
+
+            <View style={styles.commentsSection}>
+              <Text style={styles.commentsTitle}>Yorumlar</Text>
+              {item.comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <Text style={styles.commentUser}>{comment.username}</Text>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                  <Text style={styles.commentTime}>{comment.timestamp}</Text>
+                </View>
+              ))}
+              
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.commentInput}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="Yorum yaz..."
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.commentButton, !username && styles.commentButtonDisabled]}
+                  onPress={() => addComment(item.id)}
+                  disabled={!username}
+                >
+                  <Text style={styles.commentButtonText}>Gönder</Text>
+                </TouchableOpacity>
+              </KeyboardAvoidingView>
+            </View>
+          </View>
+        )}
+      </LinearGradient>
+    </View>
+  );
+
+  return (
+    <ImageBackground
+      source={require('../img/mobilbackground.jpeg')}
+      style={styles.backgroundImage}
+    >
+      <ScrollView style={styles.container}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Erzurum Etkinlikleri</Text>
+            <Text style={styles.subtitle}>
+              Doğu'nun incisi Erzurum'un en güzel etkinlikleri
+            </Text>
+          </View>
+        </LinearGradient>
+
+        <FlatList
+          data={events}
+          renderItem={renderEvent}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+        />
+      </ScrollView>
+    </ImageBackground>
   );
 };
 
-export default ErzurumScreen;
-
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f4f6f9',
+  },
+  headerGradient: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
   },
   header: {
-    backgroundColor: '#1e3a8a',
-    paddingVertical: 28,
-    paddingHorizontal: 20,
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 30,
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: '#e0e7ff',
-    fontSize: 16,
-    marginTop: 6,
+    color: '#fff',
     textAlign: 'center',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
   },
-  searchInput: {
-    margin: 16,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'white',
-    fontSize: 16,
-    borderColor: '#d1d5db',
-    borderWidth: 1,
-    color: '#111827',
+  subtitle: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
   },
-  section: {
-    marginHorizontal: 16,
-    marginTop: 28,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    borderLeftWidth: 5,
-    borderLeftColor: '#1e3a8a',
-    paddingLeft: 12,
-    marginBottom: 14,
-    color: '#1f2937',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
+  eventCard: {
+    margin: 15,
+    borderRadius: 15,
     overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  cardImage: {
-    width: '100%',
-    height: 180,
-    resizeMode: 'cover',
+  eventGradient: {
+    padding: 20,
   },
-  cardBody: {
-    padding: 16,
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  cardTitle: {
+  eventIcon: {
+    marginRight: 15,
+  },
+  eventTitleContainer: {
+    flex: 1,
+  },
+  eventTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 6,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
   },
-  cardDate: {
+  eventDate: {
     fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 8,
+    color: '#fff',
+    opacity: 0.8,
   },
-  cardDescription: {
-    fontSize: 15,
-    color: '#374151',
-    marginBottom: 12,
+  eventLocation: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 10,
   },
-  detailButton: {
-    backgroundColor: '#1e3a8a',
-    paddingVertical: 10,
-    borderRadius: 30,
+  eventDescription: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  detailsButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  detailButtonText: {
-    color: 'white',
-    fontWeight: '600',
+  detailsButtonText: {
+    color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
-  details: {
-    marginTop: 16,
-    backgroundColor: '#eff6ff',
-    padding: 16,
-    borderRadius: 10,
+  detailsContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
   },
-  detailsTitle: {
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  commentsSection: {
+    marginTop: 20,
+  },
+  commentsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1d4ed8',
-    marginBottom: 8,
+    color: '#fff',
+    marginBottom: 10,
   },
-  detailsText: {
-    fontSize: 16,
-    color: '#374151',
-    marginBottom: 8,
+  commentItem: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
   },
-  detailsListItem: {
-    fontSize: 16,
-    color: '#4b5563',
-    marginBottom: 4,
+  commentUser: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
-  footer: {
-    marginTop: 40,
+  commentText: {
+    color: '#fff',
+    marginBottom: 5,
+  },
+  commentTime: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  commentInput: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 10,
   },
-  footerText: {
-    color: '#6b7280',
-    fontSize: 13,
+  input: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 10,
+    color: '#fff',
+    marginRight: 10,
+  },
+  commentButton: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    padding: 10,
+    borderRadius: 8,
+  },
+  commentButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  commentButtonDisabled: {
+    opacity: 0.5,
   },
 });
+
+export default ErzurumScreen;

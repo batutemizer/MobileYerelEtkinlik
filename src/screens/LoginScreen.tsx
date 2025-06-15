@@ -11,12 +11,11 @@ import {
   ImageBackground,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from 'C:/Users/hp/Desktop/MobilEtkinlik2/src/screens/types/navigation.ts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RootStackParamList } from './types/navigation';
 
-const BACKEND_URL = 'http://10.196.186.1:5000/api/login';
-
-// Arka plan resmi dosyanın yolunu kendi projenin yapısına göre ayarla
-const BACKGROUND_IMAGE = require('C:/Users/hp/Desktop/MobilEtkinlik2/src/img/login.jpg');
+const BACKEND_URL = 'http://10.0.2.2:5000/api/login';
+const BACKGROUND_IMAGE = require('../img/login.jpg');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -48,6 +47,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const data = await response.json();
 
       if (data.success) {
+        // Save username to AsyncStorage
+        await AsyncStorage.setItem('username', email);
         Alert.alert('Giriş Başarılı', `Hoş geldiniz, ${email}`);
         navigation.navigate('FirstScreen');
       } else {

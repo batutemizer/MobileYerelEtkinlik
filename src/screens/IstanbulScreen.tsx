@@ -42,55 +42,55 @@ interface Event {
 const defaultEvents: Event[] = [
   {
     id: 1,
-    title: "Kars Kış Festivali",
-    date: "20-25 Ocak 2024",
-    location: "Sarıkamış Kayak Merkezi",
-    description: "Kış sporları ve eğlenceli aktivitelerle dolu bir festival.",
+    title: "İstanbul Film Festivali",
+    date: "1-15 Nisan 2024",
+    location: "İstanbul Kültür Sanat Vakfı",
+    description: "Uluslararası film gösterimleri, yönetmen söyleşileri ve ödül töreni.",
     colors: ['#1cb5e0', '#000046'],
-    icon: 'ac-unit',
+    icon: 'movie',
     details: {
-      time: '09:00 - 22:00',
-      venue: 'Sarıkamış Kayak Merkezi',
-      price: '120 TL',
-      category: 'Spor & Festival',
+      time: '10:00 - 22:00',
+      venue: 'İstanbul Kültür Sanat Vakfı',
+      price: '100 TL',
+      category: 'Sinema',
     },
     comments: []
   },
   {
     id: 2,
-    title: "Kars Kaşar Festivali",
-    date: "15-20 Haziran 2024",
-    location: "Kars Şehir Merkezi",
-    description: "Geleneksel Kars kaşar peynirinin tanıtıldığı festival.",
+    title: "İstanbul Müzik Festivali",
+    date: "1-30 Haziran 2024",
+    location: "İstanbul Cemal Reşit Rey Konser Salonu",
+    description: "Dünya çapında müzisyenlerin katılımıyla gerçekleşen klasik müzik festivali.",
     colors: ['#ff9966', '#ff5e62'],
-    icon: 'restaurant',
+    icon: 'music-note',
     details: {
-      time: '10:00 - 20:00',
-      venue: 'Kars Şehir Meydanı',
-      price: 'Ücretsiz',
-      category: 'Yemek Festivali',
+      time: '19:00 - 23:00',
+      venue: 'Cemal Reşit Rey Konser Salonu',
+      price: '150 TL',
+      category: 'Müzik',
     },
     comments: []
   },
   {
     id: 3,
-    title: "Kars Tarih ve Kültür Festivali",
-    date: "5-10 Eylül 2024",
-    location: "Kars Kalesi",
-    description: "Tarihi ve kültürel etkinlikler, sergiler ve gösteriler.",
+    title: "İstanbul Bienali",
+    date: "15 Eylül - 15 Kasım 2024",
+    location: "İstanbul Modern",
+    description: "Çağdaş sanatın en önemli etkinliklerinden biri olan İstanbul Bienali.",
     colors: ['#56ab2f', '#a8e063'],
-    icon: 'museum',
+    icon: 'palette',
     details: {
-      time: '10:00 - 20:00',
-      venue: 'Kars Kalesi ve Çevresi',
-      price: '30 TL',
-      category: 'Kültür & Sanat',
+      time: '10:00 - 18:00',
+      venue: 'İstanbul Modern ve Çeşitli Mekanlar',
+      price: '80 TL',
+      category: 'Sanat',
     },
     comments: []
   }
 ];
 
-const KarsScreen: React.FC = () => {
+const IstanbulScreen: React.FC = () => {
   const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState('');
   const [username, setUsername] = useState<string>('');
@@ -122,7 +122,7 @@ const KarsScreen: React.FC = () => {
 
   const loadComments = async () => {
     try {
-      const savedComments = await AsyncStorage.getItem('karsEventComments');
+      const savedComments = await AsyncStorage.getItem('istanbulEventComments');
       if (savedComments) {
         const parsedComments = JSON.parse(savedComments) as Event[];
         if (Array.isArray(parsedComments) && parsedComments.length > 0) {
@@ -139,7 +139,7 @@ const KarsScreen: React.FC = () => {
 
   const saveComments = async (updatedEvents: Event[]) => {
     try {
-      await AsyncStorage.setItem('karsEventComments', JSON.stringify(updatedEvents));
+      await AsyncStorage.setItem('istanbulEventComments', JSON.stringify(updatedEvents));
     } catch (error) {
       console.error('Yorumlar kaydedilirken hata oluştu:', error);
     }
@@ -177,7 +177,7 @@ const KarsScreen: React.FC = () => {
   const renderEvent = ({ item }: { item: Event }) => (
     <View style={styles.eventCard}>
       <LinearGradient
-        colors={item.colors}
+        colors={item.colors && Array.isArray(item.colors) ? item.colors : ['#000', '#fff']}
         style={styles.eventGradient}
       >
         <View style={styles.eventHeader}>
@@ -270,9 +270,9 @@ const KarsScreen: React.FC = () => {
           style={styles.headerGradient}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Kars Etkinlikleri</Text>
+            <Text style={styles.title}>İstanbul Etkinlikleri</Text>
             <Text style={styles.subtitle}>
-              Doğu'nun incisi Kars'ın en güzel etkinlikleri
+              Dünya'nın incisi İstanbul'un en güzel etkinlikleri
             </Text>
           </View>
         </LinearGradient>
@@ -451,4 +451,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default KarsScreen;
+export default IstanbulScreen; 

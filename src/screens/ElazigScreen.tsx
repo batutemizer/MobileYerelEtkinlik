@@ -1,248 +1,444 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  TextInput,
   ScrollView,
+  TouchableOpacity,
+  Linking,
+  ImageBackground,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
 } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Event = {
+type Comment = {
   id: string;
-  category: string;
+  username: string;
+  text: string;
+  timestamp: string;
+};
+
+interface Event {
+  id: number;
   title: string;
   date: string;
+  location: string;
   description: string;
-  detailsTitle: string;
-  detailsText: string;
-  detailsList: string[];
-  image: string;
-};
+  link: string;
+  colors: string[];
+  icon: string;
+  details: {
+    time: string;
+    venue: string;
+    price: string;
+    category: string;
+  };
+  comments: Comment[];
+}
 
-const events: Event[] = [
-  {
-    id: 'konser1',
-    category: 'Konserler',
-    title: 'Yüksek Sadakat - Elazığ Konseri',
-    date: '12 Mayıs 2025, 20:00 - Elazığ Kültür Park',
-    description: 'Rock müziğin güçlü ismi Elazığ’da sahnede!',
-    detailsTitle: '🎸 Yüksek Sadakat ile Müziğe Doyun 🎶',
-    detailsText:
-      'Elazığ’da sahne alacak olan Yüksek Sadakat konserinde, unutulmaz bir rock gecesi yaşanacak!',
-    detailsList: [
-      "🔥 Yüksek Sadakat'in hit şarkıları!",
-      '🎤 Sahnede enerjik bir atmosfer!',
-      '🎶 Kaçırılmayacak bir konser!',
-    ],
-    image: 'https://www.biletwise.com/uploads/category/big/1621113836.jpg',
-  },
-  {
-    id: 'tiyatro1',
-    category: 'Tiyatrolar',
-    title: 'Bir Delinin Hatıra Defteri',
-    date: '14 Mayıs 2025, 20:00 - Belediye Şehir Tiyatrosu',
-    description: 'Gogol’ün ölümsüz eseri tek kişilik performansla sahnede.',
-    detailsTitle: '🎭 Bir Delinin Hatıra Defteri - Tek Kişilik Performans!',
-    detailsText:
-      'Bu unutulmaz performansta Gogol’ün ölümsüz eseri sahneye taşınıyor!',
-    detailsList: [
-      '🎤 Unutulmaz bir oyunculuk deneyimi!',
-      '💭 Derin bir düşünce yolculuğu!',
-      '🎭 Etkileyici bir sahne deneyimi!',
-    ],
-    image:
-      'https://www.sakm.net/images/slider/sakm-tiyatro-banner-2023-aralik.jpeg',
-  },
-  {
-    id: 'soylesi1',
-    category: 'Söyleşiler',
-    title: 'Tarih ve Medeniyet Üzerine',
-    date: '16 Mayıs 2025, 18:00 - Elazığ İl Halk Kütüphanesi',
-    description: 'Prof. Dr. Ahmet Şimşirgil ile medeniyet sohbeti.',
-    detailsTitle: '📚 Tarih ve Medeniyet Üzerine Derinlemesine Bir Sohbet',
-    detailsText:
-      'Prof. Dr. Ahmet Şimşirgil ile medeniyet ve tarih üzerine yapılacak derinlemesine bir sohbet.',
-    detailsList: [
-      '💬 Bilgiyi derinlemesine keşfedin!',
-      '📖 Tarihsel olayları daha yakından öğrenin!',
-      '🗣️ Kapsamlı bir söyleşi!',
-    ],
-    image: 'https://sahnedragos.com/assets/img/SG-hakkimizda-2.jpg',
-  },
-];
+const ElazigScreen = () => {
+  const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [username, setUsername] = useState<string>('');
+  const [events, setEvents] = useState<Event[]>([
+    {
+      id: 1,
+      title: "Fırat Üniversitesi Bahar Şenlikleri",
+      date: "15-20 Mayıs 2024",
+      location: "Fırat Üniversitesi Kampüsü",
+      description: "Fırat Üniversitesi'nin geleneksel bahar şenlikleri. Konserler, spor müsabakaları ve çeşitli etkinliklerle dolu program.",
+      link: "https://www.firat.edu.tr",
+      colors: ['#1cb5e0', '#000046'],
+      icon: 'school',
+      details: {
+        time: '09:00 - 23:00',
+        venue: 'Fırat Üniversitesi Merkez Kampüs',
+        price: 'Ücretsiz',
+        category: 'Festival',
+      },
+      comments: []
+    },
+    {
+      id: 2,
+      title: "Harput Kültür Sanat Günleri",
+      date: "1-5 Temmuz 2024",
+      location: "Harput Kalesi",
+      description: "Tarihi Harput'ta düzenlenen geleneksel kültür ve sanat etkinlikleri. Halk oyunları, konserler ve yerel lezzetler.",
+      link: "https://www.elazig.bel.tr",
+      colors: ['#ff9966', '#ff5e62'],
+      icon: 'castle',
+      details: {
+        time: '10:00 - 22:00',
+        venue: 'Harput Kalesi ve Çevresi',
+        price: '50 TL',
+        category: 'Kültür & Sanat',
+      },
+      comments: []
+    },
+    {
+      id: 3,
+      title: "Elazığ Cağ Kebabı Festivali",
+      date: "10-12 Ağustos 2024",
+      location: "Elazığ Şehir Merkezi",
+      description: "Elazığ'ın meşhur cağ kebabını tanıtan festival. Yemek yarışmaları, konserler ve çeşitli etkinlikler.",
+      link: "https://www.elazig.com.tr",
+      colors: ['#56ab2f', '#a8e063'],
+      icon: 'restaurant',
+      details: {
+        time: '11:00 - 23:00',
+        venue: 'Elazığ Şehir Meydanı',
+        price: 'Ücretsiz',
+        category: 'Gastronomi',
+      },
+      comments: []
+    }
+  ]);
 
-const ElazigScreen: React.FC = () => {
-  const [searchText, setSearchText] = useState('');
-  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  useEffect(() => {
+    loadComments();
+    loadUsername();
+  }, []);
 
-  const filtered = events.filter((e) =>
-    [e.title, e.description, e.category]
-      .some((field) => field.toLowerCase().includes(searchText.toLowerCase()))
-  );
-
-  const categories = Array.from(new Set(filtered.map((e) => e.category)));
-
-  const toggleDetails = (id: string) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  const loadComments = async () => {
+    try {
+      const savedComments = await AsyncStorage.getItem('elazigEventComments');
+      if (savedComments) {
+        const parsedComments = JSON.parse(savedComments);
+        setEvents(parsedComments);
+      }
+    } catch (error) {
+      console.error('Yorumlar yüklenirken hata oluştu:', error);
+    }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Elazığ Etkinlikleri</Text>
-        <Text style={styles.headerSubtitle}>
-          Konserler, tiyatrolar ve söyleşiler bir arada!
-        </Text>
-      </View>
+  const loadUsername = async () => {
+    try {
+      const savedUsername = await AsyncStorage.getItem('username');
+      if (savedUsername) {
+        setUsername(savedUsername);
+      }
+    } catch (error) {
+      console.error('Kullanıcı adı yüklenirken hata oluştu:', error);
+    }
+  };
 
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Etkinlik ara..."
-        value={searchText}
-        onChangeText={setSearchText}
-      />
+  const saveComments = async (updatedEvents: Event[]) => {
+    try {
+      await AsyncStorage.setItem('elazigEventComments', JSON.stringify(updatedEvents));
+    } catch (error) {
+      console.error('Yorumlar kaydedilirken hata oluştu:', error);
+    }
+  };
 
-      {categories.map((category) => (
-        <View key={category} style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {category === 'Konserler'
-              ? '🎤 '
-              : category === 'Tiyatrolar'
-              ? '🎭 '
-              : '🗣️ '}
-            {category}
-          </Text>
+  const addComment = async (eventId: number) => {
+    if (!commentText.trim() || !username) return;
 
-          {filtered
-            .filter((e) => e.category === category)
-            .map((event) => (
-              <View key={event.id} style={styles.card}>
-                <Image source={{ uri: event.image }} style={styles.cardImage} />
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      username: username,
+      text: commentText.trim(),
+      timestamp: new Date().toLocaleString('tr-TR'),
+    };
 
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{event.title}</Text>
-                  <Text style={styles.cardDate}>{event.date}</Text>
-                  <Text style={styles.cardDescription}>{event.description}</Text>
+    const updatedEvents = events.map(event => {
+      if (event.id === eventId) {
+        return {
+          ...event,
+          comments: [...event.comments, newComment],
+        };
+      }
+      return event;
+    });
 
-                  <TouchableOpacity
-                    style={styles.detailButton}
-                    onPress={() => toggleDetails(event.id)}
-                  >
-                    <Text style={styles.detailButtonText}>
-                      {expandedIds.includes(event.id)
-                        ? 'Detayları Gizle ⬅️'
-                        : 'Detayları Gör ➡️'}
-                    </Text>
-                  </TouchableOpacity>
+    setEvents(updatedEvents);
+    setCommentText('');
+    await saveComments(updatedEvents);
+  };
 
-                  {expandedIds.includes(event.id) && (
-                    <View style={styles.details}>
-                      <Text style={styles.detailsTitle}>{event.detailsTitle}</Text>
-                      <Text style={styles.detailsText}>{event.detailsText}</Text>
-                      {event.detailsList.map((item, i) => (
-                        <Text key={i} style={styles.detailsListItem}>
-                          • {item}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
+  const toggleEventDetails = (eventId: number) => {
+    setExpandedEventId(expandedEventId === eventId ? null : eventId);
+  };
+
+  const renderEvent = ({ item }: { item: Event }) => (
+    <View style={styles.eventCard}>
+      <LinearGradient
+        colors={item.colors}
+        style={styles.eventGradient}
+      >
+        <View style={styles.eventHeader}>
+          <Icon name={item.icon} size={40} color="#fff" style={styles.eventIcon} />
+          <View style={styles.eventTitleContainer}>
+            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.eventDate}>{item.date}</Text>
+          </View>
         </View>
-      ))}
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          © 2025 Elazığ Etkinlikleri. Tüm hakları saklıdır.
+        <Text style={styles.eventLocation}>
+          <Icon name="location-on" size={16} color="#fff" /> {item.location}
         </Text>
-      </View>
-    </ScrollView>
+
+        <Text style={styles.eventDescription}>{item.description}</Text>
+
+        <TouchableOpacity
+          style={styles.detailsButton}
+          onPress={() => toggleEventDetails(item.id)}
+        >
+          <Text style={styles.detailsButtonText}>
+            {expandedEventId === item.id ? 'Detayları Gizle' : 'Detayları Göster'}
+          </Text>
+        </TouchableOpacity>
+
+        {expandedEventId === item.id && (
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <Icon name="access-time" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.time}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="place" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.venue}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="attach-money" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.price}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="category" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.category}</Text>
+            </View>
+
+            <View style={styles.commentsSection}>
+              <Text style={styles.commentsTitle}>Yorumlar</Text>
+              {item.comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <Text style={styles.commentUser}>{comment.username}</Text>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                  <Text style={styles.commentTime}>{comment.timestamp}</Text>
+                </View>
+              ))}
+              
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.commentInput}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="Yorum yaz..."
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.commentButton, !username && styles.commentButtonDisabled]}
+                  onPress={() => addComment(item.id)}
+                  disabled={!username}
+                >
+                  <Text style={styles.commentButtonText}>Gönder</Text>
+                </TouchableOpacity>
+              </KeyboardAvoidingView>
+            </View>
+          </View>
+        )}
+      </LinearGradient>
+    </View>
+  );
+
+  return (
+    <ImageBackground
+      source={require('../img/mobilbackground.jpeg')}
+      style={styles.backgroundImage}
+    >
+      <ScrollView style={styles.container}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Elazığ Etkinlikleri</Text>
+            <Text style={styles.subtitle}>
+              Gakkoşlar şehrinin en güzel etkinlikleri
+            </Text>
+          </View>
+        </LinearGradient>
+
+        <FlatList
+          data={events}
+          renderItem={renderEvent}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+        />
+      </ScrollView>
+    </ImageBackground>
   );
 };
 
-export default ElazigScreen;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  header: {
-    backgroundColor: '#6c63ff',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  headerTitle: { color: 'white', fontSize: 28, fontWeight: '700' },
-  headerSubtitle: { color: 'white', fontSize: 16, marginTop: 8 },
-  searchInput: {
-    margin: 16,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'white',
-    fontSize: 16,
-    borderColor: '#ccc',
-    borderWidth: 1,
-  },
-  section: { marginHorizontal: 16, marginTop: 24 },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    borderLeftWidth: 5,
-    borderLeftColor: '#6c63ff',
-    paddingLeft: 12,
-    marginBottom: 12,
-    color: '#212529',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  cardImage: {
+  backgroundImage: {
+    flex: 1,
     width: '100%',
-    height: 180,
-    resizeMode: 'cover',
+    height: '100%',
   },
-  cardBody: { padding: 16 },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 6,
-    color: '#212529',
+  container: {
+    flex: 1,
   },
-  cardDate: { fontSize: 14, color: '#6c757d', marginBottom: 8 },
-  cardDescription: { fontSize: 15, color: '#444', marginBottom: 12 },
-  detailButton: {
-    backgroundColor: '#6c63ff',
-    paddingVertical: 10,
-    borderRadius: 30,
+  headerGradient: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  header: {
     alignItems: 'center',
   },
-  detailButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
-  details: {
-    marginTop: 16,
-    backgroundColor: '#f9f3fe',
-    padding: 16,
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  eventCard: {
+    margin: 15,
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  eventGradient: {
+    padding: 20,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  eventIcon: {
+    marginRight: 15,
+  },
+  eventTitleContainer: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  eventDate: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  eventLocation: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 10,
+  },
+  eventDescription: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  detailsButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  detailsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  detailsContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  commentsSection: {
+    marginTop: 20,
+  },
+  commentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  commentItem: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  commentUser: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  commentText: {
+    color: '#fff',
+    marginBottom: 5,
+  },
+  commentTime: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  commentInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 10,
+    color: '#fff',
+    marginRight: 10,
+  },
+  commentButton: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    padding: 10,
     borderRadius: 8,
   },
-  detailsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#6c63ff',
-    marginBottom: 8,
+  commentButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
-  detailsText: { fontSize: 16, color: '#333', marginBottom: 8 },
-  detailsListItem: { fontSize: 16, color: '#555', marginBottom: 4 },
-  footer: { marginTop: 32, marginBottom: 16, alignItems: 'center' },
-  footerText: { color: '#888' },
+  commentButtonDisabled: {
+    opacity: 0.5,
+  },
 });
+
+export default ElazigScreen;

@@ -1,269 +1,453 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  Image,
-  TouchableOpacity,
-  FlatList,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  ImageBackground,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
 } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Event = {
+type Comment = {
   id: string;
-  category: string;
-  image: string;
-  title: string;
-  date: string;
-  desc: string;
-  detailsTitle: string;
-  detailsDesc: string;
-  detailsList: string[];
+  username: string;
+  text: string;
+  timestamp: string;
 };
 
-const eventsData: Event[] = [
+interface Event {
+  id: number;
+  title: string;
+  date: string;
+  location: string;
+  description: string;
+  colors: string[];
+  icon: string;
+  details: {
+    time: string;
+    venue: string;
+    price: string;
+    category: string;
+  };
+  comments: Comment[];
+}
+
+const defaultEvents: Event[] = [
   {
-    id: 'konser1',
-    category: 'Konserler',
-    image: 'https://www.biletwise.com/uploads/category/big/1621113836.jpg',
-    title: 'Haluk Levent - Malatya Açıkhava Konseri',
-    date: '30 Mayıs 2025, 20:30 - Malatya Kongre ve Kültür Merkezi',
-    desc: 'Rock müziğin efsanesi Haluk Levent Malatya’da sahnede!',
-    detailsTitle: '🎸 Unutulmaz Haluk Levent Gecesi',
-    detailsDesc:
-      'Yılların eskitemediği parçalar eşliğinde duygusal ve enerjik bir konser.',
-    detailsList: [
-      '🎤 Canlı performans',
-      '🌃 Açık hava atmosferi',
-      '🎫 Biletler hızla tükeniyor!',
-    ],
+    id: 1,
+    title: "Malatya Kayısı Festivali",
+    date: "1-5 Temmuz 2024",
+    location: "Malatya Şehir Merkezi",
+    description: "Malatya'nın meşhur kayısılarını tanıtan festival. Konserler, yarışmalar ve çeşitli etkinlikler.",
+    colors: ['#1cb5e0', '#000046'],
+    icon: 'restaurant',
+    details: {
+      time: '10:00 - 22:00',
+      venue: 'Malatya Şehir Meydanı',
+      price: 'Ücretsiz',
+      category: 'Festival',
+    },
+    comments: []
   },
-  // İstersen buraya başka etkinlikler ekleyebilirsin
+  {
+    id: 2,
+    title: "Malatya Kitap Fuarı",
+    date: "15-20 Eylül 2024",
+    location: "Malatya Fuar Alanı",
+    description: "Yazarların katılımıyla gerçekleşecek kitap fuarı. İmza günleri ve söyleşiler.",
+    colors: ['#ff9966', '#ff5e62'],
+    icon: 'menu-book',
+    details: {
+      time: '09:00 - 20:00',
+      venue: 'Malatya Fuar ve Kongre Merkezi',
+      price: '20 TL',
+      category: 'Kültür & Sanat',
+    },
+    comments: []
+  },
+  {
+    id: 3,
+    title: "Malatya Uluslararası Film Festivali",
+    date: "1-7 Kasım 2024",
+    location: "Malatya Kültür Merkezi",
+    description: "Uluslararası film gösterimleri, yönetmen söyleşileri ve ödül töreni.",
+    colors: ['#56ab2f', '#a8e063'],
+    icon: 'movie',
+    details: {
+      time: '13:00 - 23:00',
+      venue: 'Malatya Kültür ve Sanat Merkezi',
+      price: '50 TL',
+      category: 'Sinema',
+    },
+    comments: []
+  }
 ];
 
-const MalatyaScreen = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
+const MalatyaScreen: React.FC = () => {
+  const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [username, setUsername] = useState<string>('');
+  const [events, setEvents] = useState<Event[]>(defaultEvents);
 
-  const handleToggleDetails = (id: string) => {
-    setOpenDetailsId(prev => (prev === id ? null : id));
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await loadUsername();
+        await loadComments();
+      } catch (error) {
+        console.error('Veri yüklenirken hata oluştu:', error);
+        setEvents(defaultEvents);
+      }
+    };
+    initializeData();
+  }, []);
+
+  const loadUsername = async () => {
+    try {
+      const savedUsername = await AsyncStorage.getItem('username');
+      if (savedUsername) {
+        setUsername(savedUsername);
+      }
+    } catch (error) {
+      console.error('Kullanıcı adı yüklenirken hata oluştu:', error);
+    }
   };
 
-  // Arama ile filtreleme
-  const filteredEvents = eventsData.filter(event =>
-    (
-      event.title +
-      event.date +
-      event.desc +
-      event.detailsTitle +
-      event.detailsDesc +
-      event.detailsList.join(' ')
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
+  const loadComments = async () => {
+    try {
+      const savedComments = await AsyncStorage.getItem('malatyaEventComments');
+      if (savedComments) {
+        const parsedComments = JSON.parse(savedComments) as Event[];
+        if (Array.isArray(parsedComments) && parsedComments.length > 0) {
+          setEvents(parsedComments);
+        } else {
+          setEvents(defaultEvents);
+        }
+      }
+    } catch (error) {
+      console.error('Yorumlar yüklenirken hata oluştu:', error);
+      setEvents(defaultEvents);
+    }
+  };
+
+  const saveComments = async (updatedEvents: Event[]) => {
+    try {
+      await AsyncStorage.setItem('malatyaEventComments', JSON.stringify(updatedEvents));
+    } catch (error) {
+      console.error('Yorumlar kaydedilirken hata oluştu:', error);
+    }
+  };
+
+  const addComment = async (eventId: number) => {
+    if (!commentText.trim() || !username) return;
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      username: username,
+      text: commentText.trim(),
+      timestamp: new Date().toLocaleString('tr-TR'),
+    };
+
+    const updatedEvents = events.map(event => {
+      if (event.id === eventId) {
+        return {
+          ...event,
+          comments: [...event.comments, newComment],
+        };
+      }
+      return event;
+    });
+
+    setEvents(updatedEvents);
+    setCommentText('');
+    await saveComments(updatedEvents);
+  };
+
+  const toggleEventDetails = (eventId: number) => {
+    setExpandedEventId(expandedEventId === eventId ? null : eventId);
+  };
+
+  const renderEvent = ({ item }: { item: Event }) => (
+    <View style={styles.eventCard}>
+      <LinearGradient
+        colors={item.colors && Array.isArray(item.colors) ? item.colors : ['#000', '#fff']}
+        style={styles.eventGradient}
+      >
+        <View style={styles.eventHeader}>
+          <Icon name={item.icon} size={40} color="#fff" style={styles.eventIcon} />
+          <View style={styles.eventTitleContainer}>
+            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.eventDate}>{item.date}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.eventLocation}>
+          <Icon name="location-on" size={16} color="#fff" /> {item.location}
+        </Text>
+
+        <Text style={styles.eventDescription}>{item.description}</Text>
+
+        <TouchableOpacity
+          style={styles.detailsButton}
+          onPress={() => toggleEventDetails(item.id)}
+        >
+          <Text style={styles.detailsButtonText}>
+            {expandedEventId === item.id ? 'Detayları Gizle' : 'Detayları Göster'}
+          </Text>
+        </TouchableOpacity>
+
+        {expandedEventId === item.id && (
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <Icon name="access-time" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.time}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="place" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.venue}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="attach-money" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.price}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="category" size={20} color="#fff" />
+              <Text style={styles.detailText}>{item.details.category}</Text>
+            </View>
+
+            <View style={styles.commentsSection}>
+              <Text style={styles.commentsTitle}>Yorumlar</Text>
+              {item.comments && item.comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <Text style={styles.commentUser}>{comment.username}</Text>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                  <Text style={styles.commentTime}>{comment.timestamp}</Text>
+                </View>
+              ))}
+              
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.commentInput}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="Yorum yaz..."
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.commentButton, !username && styles.commentButtonDisabled]}
+                  onPress={() => addComment(item.id)}
+                  disabled={!username}
+                >
+                  <Text style={styles.commentButtonText}>Gönder</Text>
+                </TouchableOpacity>
+              </KeyboardAvoidingView>
+            </View>
+          </View>
+        )}
+      </LinearGradient>
+    </View>
   );
 
-  // Kategoriler (örneğin sadece Konserler var burada)
-  const categories = Array.from(new Set(eventsData.map(e => e.category)));
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Malatya Etkinlikleri</Text>
-        <Text style={styles.headerSubtitle}>
-          Anadolu’nun kalbinde kültür, sanat ve müzik bir arada!
-        </Text>
-      </View>
+    <ImageBackground
+      source={require('../img/mobilbackground.jpeg')}
+      style={styles.backgroundImage}
+    >
+      <ScrollView style={styles.container}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Malatya Etkinlikleri</Text>
+            <Text style={styles.subtitle}>
+              Kayısı diyarı Malatya'nın en güzel etkinlikleri
+            </Text>
+          </View>
+        </LinearGradient>
 
-      <TextInput
-        placeholder="Etkinlik ara..."
-        style={styles.searchInput}
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-      />
-
-      {categories.map(category => (
-        <View key={category} style={{ marginBottom: 30 }}>
-          <Text style={styles.sectionTitle}>
-            {category === 'Konserler' ? '🎤 Konserler' : category}
-          </Text>
-
-          <FlatList
-            data={filteredEvents.filter(e => e.category === category)}
-            keyExtractor={item => item.id}
-            scrollEnabled={false} // ScrollView zaten var
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <Text style={styles.cardDate}>{item.date}</Text>
-                  <Text style={styles.cardDesc}>{item.desc}</Text>
-
-                  <TouchableOpacity
-                    onPress={() => handleToggleDetails(item.id)}
-                    style={[
-                      styles.button,
-                      openDetailsId === item.id && styles.buttonToggle,
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.buttonText}>
-                      {openDetailsId === item.id ? 'Detayları Gizle ⬅️' : 'Detayları Gör ➡️'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {openDetailsId === item.id && (
-                    <View style={styles.details}>
-                      <Text style={styles.detailsTitle}>{item.detailsTitle}</Text>
-                      <Text style={styles.detailsDesc}>{item.detailsDesc}</Text>
-                      {item.detailsList.map((detail, index) => (
-                        <Text key={index} style={styles.detailsListItem}>
-                          • {detail}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-          />
-        </View>
-      ))}
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          © 2025 Malatya Etkinlikleri. Tüm hakları saklıdır.
-        </Text>
-      </View>
-    </ScrollView>
+        <FlatList
+          data={events}
+          renderItem={renderEvent}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+        />
+      </ScrollView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#f8f9fa',
+  backgroundImage: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 30,
+    width: '100%',
+    height: '100%',
+  },
+  container: {
+    flex: 1,
+  },
+  headerGradient: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
   },
   header: {
-    backgroundColor: '#0d6efd',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    color: 'white',
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    backgroundColor: 'white',
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    borderLeftWidth: 6,
-    borderLeftColor: '#0d6efd',
-    paddingLeft: 12,
-    marginBottom: 12,
-    color: '#0d6efd',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-    marginBottom: 18,
-    overflow: 'hidden',
-  },
-  cardImage: {
-    width: '100%',
-    height: 180,
-  },
-  cardBody: {
-    padding: 14,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#212529',
-  },
-  cardDate: {
-    fontSize: 14,
-    color: '#6c757d',
-    marginBottom: 8,
-  },
-  cardDesc: {
-    fontSize: 15,
-    color: '#444',
-  },
-  button: {
-    marginTop: 14,
-    backgroundColor: '#0d6efd',
-    borderRadius: 40,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    alignSelf: 'flex-start',
-  },
-  buttonToggle: {
-    backgroundColor: '#6610f2',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  details: {
-    marginTop: 14,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 8,
-    padding: 12,
-  },
-  detailsTitle: {
-    fontSize: 18,
-    color: '#0d6efd',
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  detailsDesc: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 6,
-  },
-  detailsListItem: {
-    fontSize: 15,
-    color: '#333',
-    marginBottom: 2,
-  },
-  footer: {
-    paddingVertical: 24,
     alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  eventCard: {
+    margin: 15,
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  eventGradient: {
+    padding: 20,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  eventIcon: {
+    marginRight: 15,
+  },
+  eventTitleContainer: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  eventDate: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  eventLocation: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 10,
+  },
+  eventDescription: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  detailsButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  detailsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  detailsContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  commentsSection: {
     marginTop: 20,
   },
-  footerText: {
-    color: '#6c757d',
+  commentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  commentItem: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  commentUser: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  commentText: {
+    color: '#fff',
+    marginBottom: 5,
+  },
+  commentTime: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  commentInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 10,
+    color: '#fff',
+    marginRight: 10,
+  },
+  commentButton: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    padding: 10,
+    borderRadius: 8,
+  },
+  commentButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  commentButtonDisabled: {
+    opacity: 0.5,
   },
 });
 

@@ -1,188 +1,253 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ImageBackground,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-  Keyboard,
-  TouchableWithoutFeedback,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from 'C:/Users/hp/Desktop/MobilEtkinlik2/src/screens/types/navigation';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, Dimensions, TextInput } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from './types/navigation';
+import { LinearGradient } from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'FirstScreen'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const cities = ['Erzurum', 'Van', 'Elazığ', 'Malatya', 'Kars'];
+type CityType = {
+  name: string;
+  tabName: string;
+  color: string;
+  gradient: string[];
+  icon: string;
+};
 
-const FirstScreen: React.FC<Props> = ({ navigation }) => {
-  const [searchText, setSearchText] = useState('');
-  const [filteredCities, setFilteredCities] = useState<string[]>([]);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+const { width } = Dimensions.get('window');
 
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    if (text.trim() === '') {
-      setFilteredCities([]);
-      setDropdownVisible(false);
-    } else {
-      const results = cities.filter((city) =>
-        city.toLowerCase().includes(text.toLowerCase())
-      );
-      setFilteredCities(results);
-      setDropdownVisible(true);
+const FirstScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const cities: CityType[] = [
+    {
+      name: 'Elazığ',
+      tabName: 'Elazığ',
+      color: '#4CAF50',
+      gradient: ['#4CAF50', '#45a049'],
+      icon: 'location-on'
+    },
+    {
+      name: 'Malatya',
+      tabName: 'Malatya',
+      color: '#2196F3',
+      gradient: ['#2196F3', '#1976D2'],
+      icon: 'location-on'
+    },
+    {
+      name: 'Van',
+      tabName: 'Van',
+      color: '#9C27B0',
+      gradient: ['#9C27B0', '#7B1FA2'],
+      icon: 'location-on'
+    },
+    {
+      name: 'Erzurum',
+      tabName: 'Erzurum',
+      color: '#FF5722',
+      gradient: ['#FF5722', '#E64A19'],
+      icon: 'location-on'
+    },
+    {
+      name: 'Kars',
+      tabName: 'Kars',
+      color: '#795548',
+      gradient: ['#795548', '#5D4037'],
+      icon: 'location-on'
+    },
+    {
+      name: 'İstanbul',
+      tabName: 'İstanbul',
+      color: '#1cb5e0',
+      gradient: ['#1cb5e0', '#000046'],
+      icon: 'location-on'
+    },
+    {
+      name: 'Ankara',
+      tabName: 'Ankara',
+      color: '#FFC107',
+      gradient: ['#FFC107', '#FFA000'],
+      icon: 'location-on'
+    },
+    {
+      name: 'İzmir',
+      tabName: 'İzmir',
+      color: '#E91E63',
+      gradient: ['#E91E63', '#C2185B'],
+      icon: 'location-on'
     }
-  };
+  ];
 
-  const handleCitySelect = (city: string) => {
-    setSearchText(city);
-    setDropdownVisible(false);
-    switch (city) {
-      case 'Elazığ':
-        navigation.navigate('ElazigScreen');
-        break;
-      case 'Malatya':
-        navigation.navigate('MalatyaScreen');
-        break;
-      case 'Kars':
-        navigation.navigate('KarsScreen');
-        break;
-      case 'Erzurum':
-        navigation.navigate('ErzurumScreen');
-        break;
-      case 'Van':
-        navigation.navigate('VanScreen');
-        break;
-    }
-  };
+  const filteredCities = cities.filter(city =>
+    city.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleAboutPress = () => {
-    navigation.navigate('HakkimizdaScreen');
+  const handleCityPress = (tabName: string) => {
+    navigation.navigate('MainTabs', { screen: tabName });
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ImageBackground
-        source={require('C:/Users/hp/Desktop/MobilEtkinlik2/src/img/mobilbackground.jpeg')}
-        style={styles.background}
-        resizeMode="cover"
-      >
-        <View style={styles.overlay}>
-          <Text style={styles.title}>Şehrini Seç</Text>
+    <ImageBackground
+      source={require('../img/mobilbackground.jpeg')}
+      style={styles.backgroundImage}
+    >
+      <ScrollView style={styles.container}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Doğu Anadolu'nun En Büyük Etkinlik Platformu</Text>
+            <Text style={styles.subtitle}>
+              Şehrinizdeki tüm etkinliklerden haberdar olun
+            </Text>
+          </View>
+        </LinearGradient>
 
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={20} color="#aaa" style={styles.searchIcon} />
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Icon name="search" size={24} color="#666" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Şehir adı giriniz..."
-              value={searchText}
-              onChangeText={handleSearch}
-              placeholderTextColor="#ccc"
+              placeholder="Şehir ara..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
+              >
+                <Icon name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
           </View>
-
-          {dropdownVisible && filteredCities.length > 0 && (
-            <FlatList
-              style={styles.dropdown}
-              data={filteredCities}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => handleCitySelect(item)}
-                >
-                  <Text style={styles.dropdownItemText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.aboutButton}
-            onPress={handleAboutPress}
-          >
-            <Icon name="information-circle-outline" size={22} color="#fff" />
-            <Text style={styles.aboutButtonText}>Hakkımda</Text>
-          </TouchableOpacity>
         </View>
-      </ImageBackground>
-    </TouchableWithoutFeedback>
+
+        <View style={styles.citiesContainer}>
+          {filteredCities.map((city, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.cityCard}
+              onPress={() => handleCityPress(city.tabName)}
+            >
+              <LinearGradient
+                colors={city.gradient}
+                style={styles.cityGradient}
+              >
+                <Icon name={city.icon} size={40} color="#fff" style={styles.cityIcon} />
+                <Text style={styles.cityName}>{city.name}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </ImageBackground>
   );
 };
 
-export default FirstScreen;
 const styles = StyleSheet.create({
-  background: {
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  container: {
     flex: 1,
   },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+  headerGradient: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  header: {
+    alignItems: 'center',
   },
   title: {
-    fontSize: 30,
-    color: '#fff',
+    fontSize: 28,
     fontWeight: 'bold',
+    color: '#fff',
     textAlign: 'center',
-    marginBottom: 40,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
   },
   searchContainer: {
+    padding: 15,
+    paddingTop: 0,
+  },
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    elevation: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#333',
   },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginTop: 10,
-    elevation: 5,
-    maxHeight: 180,
+  clearButton: {
+    padding: 5,
   },
-  dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomColor: '#eee',
-    borderBottomWidth: 1,
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  aboutButton: {
-    marginTop: 40,
+  citiesContainer: {
+    padding: 15,
     flexDirection: 'row',
-    backgroundColor: '#d11a2a',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 30,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  cityCard: {
+    width: width * 0.43,
+    height: 180,
+    marginBottom: 20,
+    borderRadius: 15,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  cityGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    elevation: 6,
+    padding: 15,
   },
-  aboutButtonText: {
+  cityIcon: {
+    marginBottom: 10,
+  },
+  cityName: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10
   },
 });
+
+export default FirstScreen;
